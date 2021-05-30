@@ -59,6 +59,8 @@
 #define T_WIRE_SPACING                  T_("Spectralizer.Wire.Space")
 #define T_WIRE_HEIGHT                   T_("Spectralizer.Wire.Height")
 #define T_COLOR                         T_("Spectralizer.Color")
+#define T_GRADIENT                      T_("Spectralizer.Gradient")
+#define T_GRADIENT_COLOR                T_("Spectralizer.Gradient.Color")
 #define T_GRAVITY                       T_("Spectralizer.Gravity")
 #define T_FALLOFF                       T_("Spectralizer.Falloff")
 #define T_FILTER_MODE                   T_("Spectralizer.Filter.Mode")
@@ -107,6 +109,8 @@
 #define S_SAMPLE_RATE                   "sample_rate"
 #define S_BAR_SPACE                     "bar_space"
 #define S_COLOR                         "color"
+#define S_GRADIENT                      "gradient"
+#define S_GRADIENT_COLOR                "gradient_color"
 #define S_FILTER_MODE                   "filter_mode"
 #define S_SGS_PASSES                    "sgs_passes"
 #define S_SGS_POINTS                    "sgs_points"

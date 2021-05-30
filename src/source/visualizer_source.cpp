@@ -65,6 +65,8 @@ void visualizer_source::update(obs_data_t *settings)
     m_config.stereo = obs_data_get_bool(settings, S_STEREO);
     m_config.stereo_space = obs_data_get_int(settings, S_STEREO_SPACE);
     m_config.color = obs_data_get_int(settings, S_COLOR);
+    m_config.color2 = obs_data_get_int(settings, S_GRADIENT_COLOR);
+    m_config.gradient = obs_data_get_bool(settings, S_GRADIENT);
     m_config.bar_width = obs_data_get_int(settings, S_BAR_WIDTH);
     m_config.bar_space = obs_data_get_int(settings, S_BAR_SPACE);
     m_config.detail = obs_data_get_int(settings, S_DETAIL);
@@ -94,6 +96,10 @@ void visualizer_source::update(obs_data_t *settings)
 
     m_config.offset = obs_data_get_double(settings, S_OFFSET) / 180.f * M_PI;
     m_config.padding = obs_data_get_double(settings, S_PADDING) / 100.f; // to %
+
+    if (!m_config.gradient) {
+        m_config.color2 = m_config.color;
+    }
 
 #ifdef LINUX
     m_config.auto_clear = obs_data_get_bool(settings, S_AUTO_CLEAR);
@@ -303,6 +309,15 @@ static bool add_source(void *data, obs_source_t *src)
     return true;
 }
 
+static bool gradient_changed(obs_properties_t *props, obs_property_t *p, obs_data_t *s)
+{
+    bool gradient = obs_data_get_bool(s, S_GRADIENT);
+    auto *gradient_color = obs_properties_get(props, S_GRADIENT_COLOR);
+
+    obs_property_set_visible(gradient_color, gradient);
+    return true;
+}
+
 obs_properties_t *get_properties_for_visualiser(void *data)
 {
     UNUSED_PARAMETER(data);
@@ -333,6 +348,9 @@ obs_properties_t *get_properties_for_visualiser(void *data)
     obs_property_set_visible(obs_properties_add_int(props, S_SGS_PASSES, T_SGS_PASSES, 1, 32, 1), false);
 
     obs_properties_add_color(props, S_COLOR, T_COLOR);
+    auto *gr = obs_properties_add_bool(props, S_GRADIENT, T_GRADIENT);
+    obs_property_set_modified_callback(gr, gradient_changed);
+    obs_properties_add_color(props, S_GRADIENT_COLOR, T_GRADIENT_COLOR);
 
     /* Bar settings */
     auto *w = obs_properties_add_int(props, S_BAR_WIDTH, T_BAR_WIDTH, 1, UINT16_MAX, 1);

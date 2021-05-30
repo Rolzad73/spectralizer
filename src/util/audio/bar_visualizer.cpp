@@ -22,8 +22,15 @@
 
 namespace audio {
 
-void bar_visualizer::draw_rectangle_bars()
+void bar_visualizer::draw_rectangle_bars(gs_effect_t *effect)
 {
+    gs_eparam_t *color = gs_effect_get_param_by_name(effect, "color");
+
+    struct vec4 colorVal;
+    vec4_from_rgba(&colorVal, m_cfg->color);
+    struct vec4 colorVal2;
+    vec4_from_rgba(&colorVal2, m_cfg->color2);
+
     size_t i = 0, pos_x = 0;
     uint32_t height;
     for (; i < m_bars_left.size() - DEAD_BAR_OFFSET; i++) { /* Leave the four dead bars the end */
@@ -32,10 +39,30 @@ void bar_visualizer::draw_rectangle_bars()
         height = UTIL_MIN(height, m_cfg->bar_height);
 
         pos_x = i * (m_cfg->bar_width + m_cfg->bar_space);
-        gs_matrix_push();
-        gs_matrix_translate3f(pos_x, (m_cfg->bar_height - height), 0);
-        gs_draw_sprite(nullptr, 0, m_cfg->bar_width, height);
-        gs_matrix_pop();
+
+        if (m_cfg->gradient) {
+            for (float j = 0.0f; j <= height; j += 1.0f) {
+                gs_matrix_push();
+                struct vec4 cur_color;
+                float factor = j / height;
+                gs_matrix_translate3f(pos_x, (m_cfg->bar_height - height + j - 1), 0);
+                cur_color.x = colorVal.x * (1.0f - factor) + colorVal2.x * factor;
+                cur_color.y = colorVal.y * (1.0f - factor) + colorVal2.y * factor;
+                cur_color.z = colorVal.z * (1.0f - factor) + colorVal2.z * factor;
+                cur_color.w = colorVal.w * (1.0f - factor) + colorVal2.w * factor;
+                gs_effect_set_vec4(color, &cur_color);
+                gs_draw_sprite(nullptr, 0, m_cfg->bar_width, 1);
+                gs_matrix_pop();
+            }
+        }
+        else
+        {
+            gs_matrix_push();
+            gs_matrix_translate3f(pos_x, (m_cfg->bar_height - height), 0);
+            gs_effect_set_vec4(color, &colorVal);
+            gs_draw_sprite(nullptr, 0, m_cfg->bar_width, height);
+            gs_matrix_pop();
+        }
     }
 }
 
@@ -156,7 +183,7 @@ void bar_visualizer::render(gs_effect_t *effect)
         if (m_cfg->rounded_corners) {
             draw_rounded_bars();
         } else {
-            draw_rectangle_bars();
+            draw_rectangle_bars(effect);
         }
     }
     UNUSED_PARAMETER(effect);

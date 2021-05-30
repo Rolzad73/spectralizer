@@ -21,7 +21,7 @@
 
 namespace audio {
 class bar_visualizer : public spectrum_visualizer {
-    void draw_rectangle_bars();
+    void draw_rectangle_bars(gs_effect_t *effect);
     void draw_stereo_rectangle_bars();
     void draw_rounded_bars();
     void draw_stereo_rounded_bars();

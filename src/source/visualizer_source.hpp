@@ -34,6 +34,9 @@ struct config {
     visual_mode visual = defaults::visual;
     smooting_mode smoothing = defaults::smoothing;
     uint32_t color = defaults::color;
+    uint32_t color2 = defaults::color;
+    bool gradient = false;
+
     uint16_t detail = defaults::detail, cx = defaults::cx, cy = defaults::cy;
     uint16_t fps = defaults::fps;
 
