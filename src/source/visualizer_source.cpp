@@ -64,9 +64,9 @@ void visualizer_source::update(obs_data_t *settings)
     m_config.visual = (visual_mode)(obs_data_get_int(settings, S_SOURCE_MODE));
     m_config.stereo = obs_data_get_bool(settings, S_STEREO);
     m_config.stereo_space = obs_data_get_int(settings, S_STEREO_SPACE);
+    m_config.paint = (paint_mode)obs_data_get_int(settings, S_PAINT_MODE);
     m_config.color = obs_data_get_int(settings, S_COLOR);
-    m_config.color2 = obs_data_get_int(settings, S_GRADIENT_COLOR);
-    m_config.gradient = obs_data_get_bool(settings, S_GRADIENT);
+    m_config.color2 = obs_data_get_int(settings, S_ALT_COLOR);
     m_config.bar_width = obs_data_get_int(settings, S_BAR_WIDTH);
     m_config.bar_space = obs_data_get_int(settings, S_BAR_SPACE);
     m_config.detail = obs_data_get_int(settings, S_DETAIL);
@@ -96,10 +96,6 @@ void visualizer_source::update(obs_data_t *settings)
 
     m_config.offset = obs_data_get_double(settings, S_OFFSET) / 180.f * M_PI;
     m_config.padding = obs_data_get_double(settings, S_PADDING) / 100.f; // to %
-
-    if (!m_config.gradient) {
-        m_config.color2 = m_config.color;
-    }
 
 #ifdef LINUX
     m_config.auto_clear = obs_data_get_bool(settings, S_AUTO_CLEAR);
@@ -148,26 +144,11 @@ void visualizer_source::tick(float seconds)
     m_config.value_mutex.unlock();
 }
 
-void visualizer_source::render(gs_effect_t *effect)
+void visualizer_source::render()
 {
-    UNUSED_PARAMETER(effect);
     if (m_visualizer) {
         m_config.value_mutex.lock();
-        gs_effect_t *solid = obs_get_base_effect(OBS_EFFECT_SOLID);
-        gs_eparam_t *color = gs_effect_get_param_by_name(solid, "color");
-        gs_technique_t *tech = gs_effect_get_technique(solid, "Solid");
-
-        struct vec4 colorVal;
-        vec4_from_rgba(&colorVal, m_config.color);
-        gs_effect_set_vec4(color, &colorVal);
-
-        gs_technique_begin(tech);
-        gs_technique_begin_pass(tech, 0);
-
-        m_visualizer->render(solid);
-
-        gs_technique_end_pass(tech);
-        gs_technique_end(tech);
+        m_visualizer->render();
         m_config.value_mutex.unlock();
     }
 }
@@ -309,12 +290,11 @@ static bool add_source(void *data, obs_source_t *src)
     return true;
 }
 
-static bool gradient_changed(obs_properties_t *props, obs_property_t *p, obs_data_t *s)
+static bool paint_mode_changed(obs_properties_t *props, obs_property_t *, obs_data_t *data)
 {
-    bool gradient = obs_data_get_bool(s, S_GRADIENT);
-    auto *gradient_color = obs_properties_get(props, S_GRADIENT_COLOR);
-
-    obs_property_set_visible(gradient_color, gradient);
+    paint_mode pm = (paint_mode)obs_data_get_int(data, S_PAINT_MODE);
+    auto *alt_color = obs_properties_get(props, S_ALT_COLOR);
+    obs_property_set_visible(alt_color, pm != PM_SOLID);
     return true;
 }
 
@@ -347,10 +327,17 @@ obs_properties_t *get_properties_for_visualiser(void *data)
     obs_property_set_visible(obs_properties_add_int(props, S_SGS_POINTS, T_SGS_POINTS, 1, 32, 1), false);
     obs_property_set_visible(obs_properties_add_int(props, S_SGS_PASSES, T_SGS_PASSES, 1, 32, 1), false);
 
+    auto *paintmode =
+        obs_properties_add_list(props, S_PAINT_MODE, T_PAINT_MODE, OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
+
+    obs_property_set_modified_callback(paintmode, paint_mode_changed);
+
+    obs_property_list_add_int(paintmode, T_PAINT_MODE_SOLID, (int)PM_SOLID);
+    obs_property_list_add_int(paintmode, T_PAINT_MODE_GRADIENT, (int)PM_GRADIENT);
+    obs_property_list_add_int(paintmode, T_PAINT_MODE_RANGE, (int)PM_RANGE);
+
     obs_properties_add_color(props, S_COLOR, T_COLOR);
-    auto *gr = obs_properties_add_bool(props, S_GRADIENT, T_GRADIENT);
-    obs_property_set_modified_callback(gr, gradient_changed);
-    obs_properties_add_color(props, S_GRADIENT_COLOR, T_GRADIENT_COLOR);
+    obs_properties_add_color(props, S_ALT_COLOR, T_ALT_COLOR);
 
     /* Bar settings */
     auto *w = obs_properties_add_int(props, S_BAR_WIDTH, T_BAR_WIDTH, 1, UINT16_MAX, 1);
@@ -485,13 +472,15 @@ void register_visualiser()
     si.get_height = [](void *data) { return reinterpret_cast<visualizer_source *>(data)->get_height(); };
     si.icon_type = OBS_ICON_TYPE_AUDIO_OUTPUT;
     si.get_defaults = [](obs_data_t *settings) {
-        obs_data_set_default_int(settings, S_COLOR, 0xFFFFFFFF);
+        obs_data_set_default_int(settings, S_PAINT_MODE, (int)defaults::paint);
+        obs_data_set_default_int(settings, S_COLOR, defaults::color);
+        obs_data_set_default_int(settings, S_ALT_COLOR, defaults::color2);
         obs_data_set_default_int(settings, S_DETAIL, defaults::detail);
         obs_data_set_default_bool(settings, S_STEREO, defaults::stereo);
-        obs_data_set_default_int(settings, S_SOURCE_MODE, (int)VM_BARS);
+        obs_data_set_default_int(settings, S_SOURCE_MODE, (int)defaults::visual);
         obs_data_set_default_string(settings, S_AUDIO_SOURCE, defaults::audio_source);
         obs_data_set_default_int(settings, S_SAMPLE_RATE, defaults::sample_rate);
-        obs_data_set_default_int(settings, S_FILTER_MODE, (int)SM_NONE);
+        obs_data_set_default_int(settings, S_FILTER_MODE, (int)defaults::smoothing);
         obs_data_set_default_double(settings, S_FILTER_STRENGTH, defaults::mcat_smooth);
         obs_data_set_default_double(settings, S_GRAVITY, defaults::gravity);
         obs_data_set_default_double(settings, S_FALLOFF, defaults::falloff_weight);
@@ -519,7 +508,7 @@ void register_visualiser()
     si.update = [](void *data, obs_data_t *settings) { reinterpret_cast<visualizer_source *>(data)->update(settings); };
     si.video_tick = [](void *data, float seconds) { reinterpret_cast<visualizer_source *>(data)->tick(seconds); };
     si.video_render = [](void *data, gs_effect_t *effect) {
-        reinterpret_cast<visualizer_source *>(data)->render(effect);
+        reinterpret_cast<visualizer_source *>(data)->render();
     };
 
     obs_register_source(&si);

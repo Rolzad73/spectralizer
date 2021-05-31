@@ -22,16 +22,9 @@
 
 namespace audio {
 
-void bar_visualizer::draw_rectangle_bars(gs_effect_t *effect)
+void bar_visualizer::draw_rectangle_bars()
 {
-    gs_eparam_t *color = gs_effect_get_param_by_name(effect, "color");
-
-    struct vec4 colorVal;
-    vec4_from_rgba(&colorVal, m_cfg->color);
-    struct vec4 colorVal2;
-    vec4_from_rgba(&colorVal2, m_cfg->color2);
-
-    size_t i = 0, pos_x = 0;
+    size_t i = 0, pos_x = 0, pos_y = 0;
     uint32_t height;
     for (; i < m_bars_left.size() - DEAD_BAR_OFFSET; i++) { /* Leave the four dead bars the end */
         auto val = m_bars_left[i] > 1.0 ? m_bars_left[i] : 1.0;
@@ -39,39 +32,17 @@ void bar_visualizer::draw_rectangle_bars(gs_effect_t *effect)
         height = UTIL_MIN(height, m_cfg->bar_height);
 
         pos_x = i * (m_cfg->bar_width + m_cfg->bar_space);
-
-        if (m_cfg->gradient) {
-            for (float j = 0.0f; j <= height; j += 1.0f) {
-                gs_matrix_push();
-                struct vec4 cur_color;
-                float factor = j / height;
-                gs_matrix_translate3f(pos_x, (m_cfg->bar_height - height + j - 1), 0);
-                cur_color.x = colorVal.x * (1.0f - factor) + colorVal2.x * factor;
-                cur_color.y = colorVal.y * (1.0f - factor) + colorVal2.y * factor;
-                cur_color.z = colorVal.z * (1.0f - factor) + colorVal2.z * factor;
-                cur_color.w = colorVal.w * (1.0f - factor) + colorVal2.w * factor;
-                gs_effect_set_vec4(color, &cur_color);
-                gs_draw_sprite(nullptr, 0, m_cfg->bar_width, 1);
-                gs_matrix_pop();
-            }
-        }
-        else
-        {
-            gs_matrix_push();
-            gs_matrix_translate3f(pos_x, (m_cfg->bar_height - height), 0);
-            gs_effect_set_vec4(color, &colorVal);
-            gs_draw_sprite(nullptr, 0, m_cfg->bar_width, height);
-            gs_matrix_pop();
-        }
+        draw_bar(pos_x, pos_y, height, 0);
     }
 }
 
 void bar_visualizer::draw_stereo_rectangle_bars()
 {
-    size_t i = 0, pos_x = 0;
+    size_t i = 0;
+    float pos_x = 0, pos_y = 0;
     uint32_t height_l, height_r;
     uint32_t offset = m_cfg->stereo_space / 2;
-    uint32_t center = m_cfg->bar_height / 2 + offset;
+    uint32_t center = m_cfg->bar_height / 2;
 
     for (; i < m_bars_left.size() - DEAD_BAR_OFFSET; i++) { /* Leave the four dead bars the end */
         double bar_left = (m_bars_left[i] > 1.0 ? m_bars_left[i] : 1.0);
@@ -85,16 +56,12 @@ void bar_visualizer::draw_stereo_rectangle_bars()
         pos_x = i * (m_cfg->bar_width + m_cfg->bar_space);
 
         /* Top */
-        gs_matrix_push();
-        gs_matrix_translate3f(pos_x, (center - height_l) - offset, 0);
-        gs_draw_sprite(nullptr, 0, m_cfg->bar_width, height_l);
-        gs_matrix_pop();
+        pos_y = center + offset;
+        draw_bar(pos_x, -pos_y, height_l, 0);
 
         /* Bottom */
-        gs_matrix_push();
-        gs_matrix_translate3f(pos_x, center + offset, 0);
-        gs_draw_sprite(nullptr, 0, m_cfg->bar_width, height_r);
-        gs_matrix_pop();
+        pos_y = center - height_r - offset;
+        draw_bar(pos_x, -pos_y, height_r, GS_FLIP_V);
     }
 }
 
@@ -124,7 +91,6 @@ void bar_visualizer::draw_rounded_bars()
 
 void bar_visualizer::draw_stereo_rounded_bars()
 {
-
     size_t i = 0, pos_x = 0;
     uint32_t height_l, height_r;
     int32_t offset = m_cfg->stereo_space / 2;
@@ -163,9 +129,53 @@ void bar_visualizer::draw_stereo_rounded_bars()
     }
 }
 
+void bar_visualizer::draw_bar(float pos_x, float pos_y, uint32_t height, uint32_t flip)
+{
+    switch (m_cfg->paint) {
+    case PM_SOLID:
+    case PM_GRADIENT:
+        effect = obs_get_base_effect(OBS_EFFECT_DEFAULT);
+        tech = gs_effect_get_technique(effect, "Draw");
+        gs_technique_begin(tech);
+        gs_technique_begin_pass(tech, 0);
+        gs_matrix_push();
+
+        gs_matrix_translate3f(pos_x, pos_y + (m_cfg->bar_height - height), 0);
+        tex = gs_texrender_get_texture(texture_render);
+        gs_effect_set_texture(gs_effect_get_param_by_name(effect, "image"), tex);
+        gs_draw_sprite(tex, flip, m_cfg->bar_width, height);
+
+        gs_matrix_pop();
+        gs_technique_end_pass(tech);
+        gs_technique_end(tech);
+        break;
+    case PM_RANGE:
+        effect = obs_get_base_effect(OBS_EFFECT_SOLID);
+        tech = gs_effect_get_technique(effect, "Solid");
+        gs_technique_begin(tech);
+        gs_technique_begin_pass(tech, 0);
+        gs_matrix_push();
+
+        struct vec4 cur_color;
+        float factor = (float)height / m_cfg->bar_height;
+        gs_matrix_translate3f(pos_x, pos_y + (m_cfg->bar_height - height), 0);
+        cur_color.x = colorVal2.x * (1.0f - factor) + colorVal.x * factor;
+        cur_color.y = colorVal2.y * (1.0f - factor) + colorVal.y * factor;
+        cur_color.z = colorVal2.z * (1.0f - factor) + colorVal.z * factor;
+        cur_color.w = colorVal2.w * (1.0f - factor) + colorVal.w * factor;
+        gs_effect_set_vec4(color, &cur_color);
+        gs_draw_sprite(nullptr, 0, m_cfg->bar_width, height);
+
+        gs_matrix_pop();
+        gs_technique_end_pass(tech);
+        gs_technique_end(tech);
+        break;
+    }
+}
+
 bar_visualizer::bar_visualizer(source::config *cfg) : spectrum_visualizer(cfg) {}
 
-void bar_visualizer::render(gs_effect_t *effect)
+void bar_visualizer::render()
 {
     /* Just in case */
     if (m_bars_left.size() != m_cfg->detail + DEAD_BAR_OFFSET)
@@ -183,10 +193,67 @@ void bar_visualizer::render(gs_effect_t *effect)
         if (m_cfg->rounded_corners) {
             draw_rounded_bars();
         } else {
-            draw_rectangle_bars(effect);
+            draw_rectangle_bars();
         }
     }
-    UNUSED_PARAMETER(effect);
+}
+
+void bar_visualizer::update()
+{
+    spectrum_visualizer::update();
+    vec4_from_rgba(&colorVal, m_cfg->color);
+    vec4_from_rgba(&colorVal2, m_cfg->color2);
+
+    obs_enter_graphics();
+
+    if (!texture_render) { texture_render = gs_texrender_create(GS_RGBA, GS_ZS_NONE); }
+    else { gs_texrender_reset(texture_render); }
+
+    if (gs_texrender_begin(texture_render, m_cfg->bar_width, m_cfg->bar_height)) {
+        gs_ortho(0.0f, (float)m_cfg->bar_width, 0.0f, (float)m_cfg->bar_height, -100.0, 100.0);
+        effect = obs_get_base_effect(OBS_EFFECT_SOLID);
+        tech = gs_effect_get_technique(effect, "Solid");
+        color = gs_effect_get_param_by_name(effect, "color");
+
+        gs_technique_begin(tech);
+        gs_technique_begin_pass(tech, 0);
+
+        struct vec4 clear_color;
+        vec4_zero(&clear_color);
+        gs_clear(GS_CLEAR_COLOR, &colorVal, 0.0f, 0);
+
+        switch (m_cfg->paint) {
+        case PM_SOLID:
+            gs_effect_set_vec4(color, &colorVal);
+            gs_draw_sprite(nullptr, 0, m_cfg->bar_width, m_cfg->bar_height);
+            break;
+        case PM_GRADIENT:
+            struct vec4 cur_color;
+            float factor;
+            float i;
+            for (i = 0.0f; i <= m_cfg->bar_height; i += 1.0f) {
+                gs_matrix_push();
+                factor = i / m_cfg->bar_height;
+                gs_matrix_translate3f(0, (m_cfg->bar_height - i), 0);
+                cur_color.x = colorVal2.x * (1.0f - factor) + colorVal.x * factor;
+                cur_color.y = colorVal2.y * (1.0f - factor) + colorVal.y * factor;
+                cur_color.z = colorVal2.z * (1.0f - factor) + colorVal.z * factor;
+                cur_color.w = colorVal2.w * (1.0f - factor) + colorVal.w * factor;
+                gs_effect_set_vec4(color, &cur_color);
+                gs_draw_sprite(nullptr, 0, m_cfg->bar_width, 1);
+                gs_matrix_pop();
+            }
+            break;
+        case PM_RANGE:
+            // can't set texture here as color changes with height of bar
+            break;
+        }
+
+        gs_technique_end_pass(tech);
+        gs_technique_end(tech);
+        gs_texrender_end(texture_render);
+    }
+    obs_leave_graphics();
 }
 
 }

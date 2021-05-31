@@ -21,13 +21,25 @@
 
 namespace audio {
 class bar_visualizer : public spectrum_visualizer {
-    void draw_rectangle_bars(gs_effect_t *effect);
+    void draw_rectangle_bars();
     void draw_stereo_rectangle_bars();
     void draw_rounded_bars();
     void draw_stereo_rounded_bars();
+    void draw_bar(float pos_x, float pos_y, uint32_t height, uint32_t flip);
+
+protected:
+    gs_effect_t *effect = nullptr;
+    gs_technique_t *tech = nullptr;
+    gs_eparam_t *color = nullptr;
+    gs_texrender_t *texture_render = nullptr;
+    gs_texture_t *tex = nullptr;
+
+    struct vec4 colorVal;
+    struct vec4 colorVal2;
 
 public:
     explicit bar_visualizer(source::config *cfg);
-    void render(gs_effect_t *effect) override;
+    void render() override;
+    void update() override;
 };
 }

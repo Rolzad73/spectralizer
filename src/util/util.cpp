@@ -24,6 +24,8 @@ const bool stereo                                         = false;
 const visual_mode visual                                  = VM_BARS;
 const smooting_mode smoothing                             = SM_NONE;
 const uint32_t color                                      = 0xffffffff;
+const uint32_t color2                                     = 0xffffffff;
+const paint_mode paint                                    = PM_SOLID;
 
 const bool log_freq_scale = false;
 const log_freq_qual log_freq_quality                      = LFQ_FAST;

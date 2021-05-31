@@ -29,6 +29,6 @@ class wire_visualizer : public spectrum_visualizer {
 public:
     explicit wire_visualizer(source::config *cfg);
 
-    void render(gs_effect_t *e) override;
+    void render() override;
 };
 }

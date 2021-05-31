@@ -68,7 +68,7 @@ circle_bar_visualizer::circle_bar_visualizer(source::config *cfg) : spectrum_vis
     update();
 }
 
-void circle_bar_visualizer::render(gs_effect_t *)
+void circle_bar_visualizer::render()
 {
     if (m_cfg->rounded_corners) {
         draw_rounded_bar_circle();

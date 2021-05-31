@@ -45,6 +45,6 @@ public:
      * user configured fps */
     virtual void tick(float seconds);
 
-    virtual void render(gs_effect_t *effect) = 0;
+    virtual void render() = 0;
 };
 }

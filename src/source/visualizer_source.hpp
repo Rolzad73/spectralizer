@@ -34,8 +34,8 @@ struct config {
     visual_mode visual = defaults::visual;
     smooting_mode smoothing = defaults::smoothing;
     uint32_t color = defaults::color;
-    uint32_t color2 = defaults::color;
-    bool gradient = false;
+    uint32_t color2 = defaults::color2;
+    paint_mode paint = defaults::paint;
 
     uint16_t detail = defaults::detail, cx = defaults::cx, cy = defaults::cy;
     uint16_t fps = defaults::fps;
@@ -101,7 +101,7 @@ public:
 
     inline void update(obs_data_t *settings);
     inline void tick(float seconds);
-    inline void render(gs_effect_t *effect);
+    inline void render();
 
     uint32_t get_width() const { return m_config.cx; }
 

@@ -29,7 +29,7 @@ class circle_bar_visualizer : public spectrum_visualizer {
 
 public:
     explicit circle_bar_visualizer(source::config *cfg);
-    void render(gs_effect_t *effect) override;
+    void render() override;
     void update() override;
 };
 }

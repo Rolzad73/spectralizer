@@ -198,7 +198,7 @@ gs_vertbuffer_t *wire_visualizer::make_filled_inverted(channel_mode cm)
     return gs_render_save();
 }
 
-void wire_visualizer::render(gs_effect_t *e)
+void wire_visualizer::render()
 {
     gs_vertbuffer_t *vb_left = nullptr, *vb_right = nullptr;
     enum gs_draw_mode m = GS_TRISTRIP;
