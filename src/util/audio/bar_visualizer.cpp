@@ -220,7 +220,7 @@ void bar_visualizer::update()
 
         struct vec4 clear_color;
         vec4_zero(&clear_color);
-        gs_clear(GS_CLEAR_COLOR, &colorVal, 0.0f, 0);
+        gs_clear(GS_CLEAR_COLOR, &clear_color, 0.0f, 0);
 
         switch (m_cfg->paint) {
         case PM_SOLID:

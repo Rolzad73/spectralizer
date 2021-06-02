@@ -336,8 +336,8 @@ obs_properties_t *get_properties_for_visualiser(void *data)
     obs_property_list_add_int(paintmode, T_PAINT_MODE_GRADIENT, (int)PM_GRADIENT);
     obs_property_list_add_int(paintmode, T_PAINT_MODE_RANGE, (int)PM_RANGE);
 
-    obs_properties_add_color(props, S_COLOR, T_COLOR);
-    obs_properties_add_color(props, S_ALT_COLOR, T_ALT_COLOR);
+    obs_properties_add_color_alpha(props, S_COLOR, T_COLOR);
+    obs_properties_add_color_alpha(props, S_ALT_COLOR, T_ALT_COLOR);
 
     /* Bar settings */
     auto *w = obs_properties_add_int(props, S_BAR_WIDTH, T_BAR_WIDTH, 1, UINT16_MAX, 1);
